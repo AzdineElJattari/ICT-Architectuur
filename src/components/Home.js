@@ -3,7 +3,8 @@ import { Button, FormGroup, Modal, Form, Card, CardGroup} from "react-bootstrap"
 
 export default function Home() {
   const [show, setShow] = useState(false);
-  const [isChecked, setIsChecked] = useState(false);
+  const [isCheckedUpload, setisCheckedUpload] = useState(false);
+  const [isCheckedDownload, setisCheckedDownload] = useState(false);
 
   const handleClose = () => setShow(false);
   const handleShow = () => setShow(true);
@@ -17,13 +18,15 @@ export default function Home() {
               <Form.Group>
                 <Form.Label>Upload</Form.Label>
 
-                <Form.Group controlId="formPasswordCheckbox">
-                  <Form.Check type="switch" label="Enable password" checked={isChecked} onChange={(e)=>{setIsChecked(e.target.checked)}} />
-                </Form.Group>
+                <Form.Group controleId="formPasswordUpload">
+                  <Form.Group controlId="formPasswordSwitchUpload">
+                    <Form.Check type="switch" label={isCheckedUpload ? "Password enabled" : "Password disabled" } checked={isCheckedUpload} onChange={(e)=>{setisCheckedUpload(e.target.checked)}} />
+                  </Form.Group>
 
-                <Form.Group controlId="formBasicPassword">
-                  <Form.Label>Password</Form.Label>
-                  <Form.Control type="password" placeholder="Password" disabled={isChecked ? false : true} />
+                  <Form.Group controlId="formBasicPasswordUpload">
+                    <Form.Label>Password</Form.Label>
+                    <Form.Control type="password" placeholder="Password" disabled={isCheckedUpload ? false : true} />
+                  </Form.Group>
                 </Form.Group>
 
                 <Form.Group controlId="formFileUpload">
@@ -50,12 +53,23 @@ export default function Home() {
               <Form.Group>
                 <Form.Label>Download</Form.Label>
 
-                <Form.Group controlId="formUUID">
+                <Form.Group controlId="formUUIDDownload">
                   <Form.Label>UUID</Form.Label>
                   <Form.Control placeholder="UUID" />
                 </Form.Group>
 
-                <Form.Group>
+                <Form.Group controleId="formPasswordDownload">
+                  <Form.Group controlId="formPasswordSwitchDownload">
+                    <Form.Check type="switch" label={isCheckedDownload ? "Has password" : "No password" } checked={isCheckedDownload} onChange={(e)=>{setisCheckedDownload(e.target.checked)}} />
+                  </Form.Group>
+
+                  <Form.Group controlId="formBasicPasswordDownload">
+                    <Form.Label>Password</Form.Label>
+                    <Form.Control type="password" placeholder="Password" disabled={isCheckedDownload ? false : true} />
+                  </Form.Group>
+                </Form.Group>
+
+                <Form.Group controleId="formChecksumDownload">
                   <Form.Label>Checksum: 0</Form.Label>
                 </Form.Group>
 
