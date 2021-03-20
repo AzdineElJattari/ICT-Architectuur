@@ -1,8 +1,9 @@
 import React, { useState, useEffect } from "react";
-import axios from "axios";
+import correct from "../images/correct.png";
+import { CopyToClipboard } from "react-copy-to-clipboard";
+import ReactTooltip from "react-tooltip";
 import {
   Button,
-  Modal,
   Form,
   Card,
   CardGroup,
@@ -11,109 +12,128 @@ import {
   Container,
   Row,
 } from "react-bootstrap";
+import axios from "axios";
 
 const UserRow = ({ item, onClick }) => (
-  <tr onClick={onClick}>
-    <td>{item.uploader}</td>
-    <td>{item.filename}</td>
-    <td>{item.DocID}</td>
-    <td>{item.checksum}</td>
-  </tr>
+  <>
+    <ReactTooltip />
+    <tr
+      onClick={onClick}
+      style={{ cursor: "pointer" }}
+      data-tip="Click on the row of an specific file to retrieve the logs"
+    >
+      <td>{item.filename}</td>
+      <td>{item.DocID}</td>
+      <td>{item.checksum}</td>
+    </tr>
+  </>
 );
 
 export default function Home() {
   const [files, setFiles] = useState([]);
   const [logs, setLogs] = useState([]);
+  const [downloadUrl, setDownloadUrl] = useState("");
+  const [presignedDownloadUrl, setPresignedDownloadUrl] = useState({});
   const [selectedLog, setSelectedLog] = useState(
     "1def78ca-daa0-4eb3-8813-0329dedb5065"
   );
+  const [hasGivenUuid, setHasGivenUuid] = useState(false);
+  const [copied, setCopied] = useState(false);
   const [show, setShow] = useState(false);
   const [loading, setLoading] = useState(true);
-  const [isCheckedUpload, setisCheckedUpload] = useState(false);
-  const [isCheckedDownload, setisCheckedDownload] = useState(false);
 
   useEffect(() => {
     async function fetchData() {
       var getFiles =
         "https://ohpj90916c.execute-api.us-east-1.amazonaws.com/getFiles?user=Laurens&api=PXW64JdS4dP2HJNQFt9D";
-      var getLogs = `https://ohpj90916c.execute-api.us-east-1.amazonaws.com/getLogs?user=Laurens&api=PXW64JdS4dP2HJNQFt9D&id=${selectedLog}`; //Moet nog aangepast  worden
+      var getLogs = `https://ohpj90916c.execute-api.us-east-1.amazonaws.com/getLogs?user=Laurens&api=PXW64JdS4dP2HJNQFt9D&id=${selectedLog}`;
+      var getDownloadUrl = `https://ohpj90916c.execute-api.us-east-1.amazonaws.com/getDownloadURL?user=Laurens&api=PXW64JdS4dP2HJNQFt9D&id=1def78ca-daa0-4eb3-8813-0329dedb5065`;
 
       const requestOne = axios.get(getFiles);
       const requestTwo = axios.get(getLogs);
+      const requestThree = hasGivenUuid
+        ? axios.get(
+            `https://ohpj90916c.execute-api.us-east-1.amazonaws.com/getDownloadURL?user=Laurens&api=PXW64JdS4dP2HJNQFt9D&id=${downloadUrl}`
+          )
+        : axios.get(getDownloadUrl);
       axios
-        .all([requestOne, requestTwo])
+        .all([requestOne, requestTwo, requestThree])
         .then(
           axios.spread((...responses) => {
             const responseOne = responses[0];
             const responseTwo = responses[1];
+            const responseThree = responses[2];
 
             setFiles(responseOne.data.Items);
             setLogs(responseTwo.data.Items);
+            setPresignedDownloadUrl(responseThree.data);
             setLoading(false);
           })
         )
         .catch((errors) => {
           console.error(errors);
         });
+
+      /*axios({
+        method: "post",
+        url:
+          "https://ohpj90916c.execute-api.us-east-1.amazonaws.com/getUploadURL",
+        headers: {},
+        data: {
+          user: "Laurens",
+          api: "PXW64JdS4dP2HJNQFt9D",
+          fileName: "testFile.jpg",
+        },
+      });*/
     }
     fetchData();
-  }, [selectedLog]);
+  }, [selectedLog, downloadUrl, hasGivenUuid]);
 
   const handleClose = () => setShow(false);
   const handleShow = () => setShow(true);
+
+  const onChangeHandler = (event) => {
+    setDownloadUrl(event.target.value);
+    setCopied(false);
+  };
 
   function handleUserClick(item) {
     setSelectedLog(item.DocID);
   }
 
+  function handleDownloadUrlCLick() {
+    setHasGivenUuid(true);
+  }
+
   return (
     <div>
+      <ReactTooltip />
+      <Container
+        style={{ textAlign: "center", marginTop: "2%", marginBottom: "2%" }}
+      >
+        <h1 style={{ color: "blue" }}>ICT Architectuur - Groep 1</h1>
+      </Container>
       <CardGroup>
         <Card>
           <Card.Body>
             <Form>
               <Form.Group>
-                <Form.Label>Upload</Form.Label>
-
-                <Form.Group controlId="formPasswordUpload">
-                  <Form.Group controlId="formPasswordSwitchUpload">
-                    <Form.Check
-                      type="switch"
-                      label={
-                        isCheckedUpload
-                          ? "Password enabled"
-                          : "Password disabled"
-                      }
-                      checked={isCheckedUpload}
-                      onChange={(e) => {
-                        setisCheckedUpload(e.target.checked);
-                      }}
-                    />
-                  </Form.Group>
-
-                  <Form.Group controlId="formBasicPasswordUpload">
-                    <Form.Label>Password</Form.Label>
-                    <Form.Control
-                      type="password"
-                      placeholder="Password"
-                      disabled={isCheckedUpload ? false : true}
-                    />
-                  </Form.Group>
-                </Form.Group>
-
-                <Form.Group controlId="formFileUpload">
-                  <Form.File
-                    className="position-relative"
-                    required
-                    name="file"
-                    label="File"
-                    id="file"
-                  />
-                </Form.Group>
-
-                <Button variant="primary" onClick={handleShow}>
-                  Bestand uploaden
+                <Form.Label>Get upload URL</Form.Label>
+                <Form.Control
+                  placeholder="Enter filename"
+                  onChange={onChangeHandler}
+                />
+                <Button
+                  variant="primary"
+                  onClick={handleShow}
+                  style={{ marginTop: "3%" }}
+                >
+                  Get upload URL
                 </Button>
+                <br />
+                <Form.Label style={{ fontWeight: "bold", marginTop: "5%" }}>
+                  Presigned upload URL:
+                </Form.Label>
               </Form.Group>
             </Form>
           </Card.Body>
@@ -123,62 +143,60 @@ export default function Home() {
           <Card.Body>
             <Form>
               <Form.Group>
-                <Form.Label>Download</Form.Label>
+                <Form.Label>Get download URL</Form.Label>
 
                 <Form.Group controlId="formUUIDDownload">
-                  <Form.Label>UUID</Form.Label>
-                  <Form.Control placeholder="UUID" />
+                  <Form.Control
+                    placeholder="Enter UUID"
+                    onChange={onChangeHandler}
+                  />
                 </Form.Group>
 
-                <Form.Group controleId="formPasswordDownload">
-                  <Form.Group controlId="formPasswordSwitchDownload">
-                    <Form.Check
-                      type="switch"
-                      label={isCheckedDownload ? "Has password" : "No password"}
-                      checked={isCheckedDownload}
-                      onChange={(e) => {
-                        setisCheckedDownload(e.target.checked);
-                      }}
-                    />
-                  </Form.Group>
-
-                  <Form.Group controlId="formBasicPasswordDownload">
-                    <Form.Label>Password</Form.Label>
-                    <Form.Control
-                      type="password"
-                      placeholder="Password"
-                      disabled={isCheckedDownload ? false : true}
-                    />
-                  </Form.Group>
-                </Form.Group>
-
-                <Form.Group controleId="formChecksumDownload">
-                  <Form.Label>Checksum: 0</Form.Label>
-                </Form.Group>
-
-                <Button variant="primary" onClick={handleShow}>
-                  Download bestand
+                <Button variant="primary" onClick={handleDownloadUrlCLick}>
+                  Get download URL
                 </Button>
+                <Form.Group
+                  controleId="formChecksumDownload"
+                  style={{ marginTop: "5%" }}
+                >
+                  <Form.Label style={{ fontWeight: "bold" }}>
+                    Presigned download URL:
+                  </Form.Label>
+
+                  <CopyToClipboard
+                    text={
+                      presignedDownloadUrl.url === undefined &&
+                      presignedDownloadUrl.url === null
+                        ? " "
+                        : presignedDownloadUrl.url
+                    }
+                    onCopy={() => setCopied(true)}
+                  >
+                    <Button
+                      variant="info"
+                      style={{
+                        visibility: `${hasGivenUuid ? "visible" : "hidden"}`,
+                        marginLeft: "20px",
+                      }}
+                    >
+                      Copy URL
+                    </Button>
+                  </CopyToClipboard>
+                  <img
+                    alt="greenmarker"
+                    src={correct}
+                    style={{
+                      marginLeft: "25px",
+                      width: "35px",
+                      visibility: `${copied ? "visible" : "hidden"}`,
+                    }}
+                  />
+                </Form.Group>
               </Form.Group>
             </Form>
           </Card.Body>
         </Card>
       </CardGroup>
-
-      <Modal show={show} onHide={handleClose}>
-        <Modal.Header closeButton>
-          <Modal.Title>Modal heading</Modal.Title>
-        </Modal.Header>
-        <Modal.Body>Woohoo, you're reading this text in a modal!</Modal.Body>
-        <Modal.Footer>
-          <Button variant="danger" onClick={handleClose}>
-            Close
-          </Button>
-          <Button variant="primary" onClick={handleClose}>
-            Save Changes
-          </Button>
-        </Modal.Footer>
-      </Modal>
       {loading ? (
         <Spinner
           animation="border"
@@ -192,9 +210,8 @@ export default function Home() {
             <Table striped bordered hover responsive>
               <thead>
                 <tr>
-                  <th>Uploader</th>
                   <th>Filename</th>
-                  <th>Document ID</th>
+                  <th>UUID</th>
                   <th>Checksum</th>
                 </tr>
               </thead>
@@ -214,7 +231,6 @@ export default function Home() {
             <Table striped bordered hover responsive>
               <thead>
                 <tr>
-                  <th>Uploader</th>
                   <th>Document ID</th>
                   <th>Log ID</th>
                   <th>Log time</th>
@@ -223,7 +239,6 @@ export default function Home() {
               <tbody>
                 {logs.map((item, i) => (
                   <tr key={i}>
-                    <td>{item.username}</td>
                     <td>{item.DocID}</td>
                     <td>{item.LogID}</td>
                     <td>{item.LogTime}</td>
@@ -237,40 +252,3 @@ export default function Home() {
     </div>
   );
 }
-
-/*  <Button variant="primary" onClick={handleShow}>
-                    Access logs
-                  </Button>
-
-                  <Modal show={show} onHide={handleClose}>
-                    <Modal.Header closeButton>
-                      <Modal.Title>Logs of file: {item.filename}</Modal.Title>
-                    </Modal.Header>
-                    <Modal.Body>
-                      <Table responsive>
-                        <thead>
-                          <tr>
-                            <th>Uploader</th>
-                            <th>Document ID</th>
-                            <th>Log ID</th>
-                            <th>Log time</th>
-                          </tr>
-                        </thead>
-                        <tbody>
-                          {logs.map((item, i) => (
-                            <tr key={i}>
-                              <td>{item.username}</td>
-                              <td>{item.DocID}</td>
-                              <td>{item.LogID}</td>
-                              <td>{item.LogTime}</td>
-                            </tr>
-                          ))}
-                        </tbody>
-                      </Table>
-                    </Modal.Body>
-                    <Modal.Footer>
-                      <Button variant="danger" onClick={handleClose}>
-                        Close
-                      </Button>
-                    </Modal.Footer>
-                  </Modal>*/

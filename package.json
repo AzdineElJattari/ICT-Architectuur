@@ -6,13 +6,18 @@
     "@testing-library/jest-dom": "^5.11.9",
     "@testing-library/react": "^11.2.5",
     "@testing-library/user-event": "^12.8.3",
+    "axios": "^0.21.1",
     "bootstrap": "^4.6.0",
     "react": "^17.0.1",
     "react-background-slideshow": "^1.0.4",
     "react-bootstrap": "^1.5.2",
+    "react-copy-to-clipboard": "^5.0.3",
     "react-dom": "^17.0.1",
     "react-responsive-carousel": "^3.2.13",
+    "react-router": "^5.2.0",
+    "react-router-dom": "^5.2.0",
     "react-scripts": "4.0.3",
+    "react-tooltip": "^4.2.15",
     "web-vitals": "^1.1.0"
   },
   "scripts": {
