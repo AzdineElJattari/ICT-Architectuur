@@ -1,5 +1,7 @@
 import React, { useState, useEffect } from "react";
 import correct from "../images/correct.png";
+import copy from "../images/copy.png";
+import download from "../images/download.png";
 import { CopyToClipboard } from "react-copy-to-clipboard";
 import ReactTooltip from "react-tooltip";
 import {
@@ -23,8 +25,16 @@ const UserRow = ({ item, onClick }) => (
       data-tip="Click on the row of an specific file to retrieve the logs"
     >
       <td>{item.filename}</td>
-      <td>{item.DocID}</td>
+      <td>{item.DocID} </td>
+      <td>
+        <CopyToClipboard text={item.DocID} onCopy={() => true}>
+          <Button variant="primary" style={{ marginLeft: "20%" }}>
+            <img src={copy} alt="copy image" />
+          </Button>
+        </CopyToClipboard>
+      </td>
       <td>{item.checksum}</td>
+      <td>{item.expDate}</td>
     </tr>
   </>
 );
@@ -32,24 +42,22 @@ const UserRow = ({ item, onClick }) => (
 export default function Home() {
   const [files, setFiles] = useState([]);
   const [logs, setLogs] = useState([]);
-  const [uploadUrl, setUploadUrl] = useState({});
+  const [selectedFile, setSelectedFile] = useState(null);
   const [downloadUrl, setDownloadUrl] = useState("");
   const [presignedDownloadUrl, setPresignedDownloadUrl] = useState({});
-  const [selectedLog, setSelectedLog] = useState(
-    "1def78ca-daa0-4eb3-8813-0329dedb5065"
-  );
-  const [selectedFile, setSelectedFile] = useState("");
+  const [selectedLog, setSelectedLog] = useState({});
   const [hasGivenUuid, setHasGivenUuid] = useState(false);
-  const [copied, setCopied] = useState(false);
-  const [show, setShow] = useState(false);
-  const [loading, setLoading] = useState(true);
   const [uuid, setUuid] = useState("");
+  const [copied, setCopied] = useState(false);
+  const [loading, setLoading] = useState(true);
 
   useEffect(() => {
     async function fetchData() {
       var getFiles =
         "https://ohpj90916c.execute-api.us-east-1.amazonaws.com/getFiles?user=Laurens&api=PXW64JdS4dP2HJNQFt9D";
-      var getLogs = `https://ohpj90916c.execute-api.us-east-1.amazonaws.com/getLogs?user=Laurens&api=PXW64JdS4dP2HJNQFt9D&id=${selectedLog}`;
+      var getLogs = `https://ohpj90916c.execute-api.us-east-1.amazonaws.com/getLogs?user=Laurens&api=PXW64JdS4dP2HJNQFt9D&id=${
+        selectedLog === null ? " " : selectedLog
+      }`;
 
       const requestOne = axios.get(getFiles).catch((err) => console.log(err));
       const requestTwo = axios.get(getLogs).catch((err) => console.log(err));
@@ -58,25 +66,17 @@ export default function Home() {
           `https://ohpj90916c.execute-api.us-east-1.amazonaws.com/getDownloadURL?user=Laurens&api=PXW64JdS4dP2HJNQFt9D&id=${downloadUrl}`
         )
         .catch((err) => console.log(err));
-      const requestFour = axios
-        .get(
-          `https://ohpj90916c.execute-api.us-east-1.amazonaws.com/getUploadURL?user=Laurens&api=PXW64JdS4dP2HJNQFt9D&file=${
-            selectedFile === null ? " " : selectedFile.name
-          }`
-        )
-        .catch((err) => console.log(err));
+
       axios
-        .all([requestOne, requestTwo, requestThree, requestFour])
+        .all([requestOne, requestTwo, requestThree])
         .then(
           axios.spread((...responses) => {
             const responseOne = responses[0];
             const responseTwo = responses[1];
             const responseThree = responses[2];
-            const responseFour = responses[3];
 
-            setFiles(responseOne.data.Items);
-            setLogs(responseTwo.data.Items);
-            setUploadUrl(responseFour.data);
+            setFiles([...responseOne.data.Items]);
+            setLogs([...responseTwo.data.Items]);
             setPresignedDownloadUrl(responseThree.data);
             setLoading(false);
           })
@@ -88,9 +88,7 @@ export default function Home() {
     fetchData();
   }, [selectedLog, downloadUrl, hasGivenUuid]);
 
-  const handleClose = () => setShow(false);
-  const handleShow = () => setShow(true);
-
+  //Download
   const handleUuidChange = (event) => {
     setUuid(event.target.value);
     setCopied(false);
@@ -106,10 +104,62 @@ export default function Home() {
     setHasGivenUuid(true);
   }
 
-  function handleFileUpload(event) {
-    setSelectedFile(event.target.files[0]);
-    console.log(event.target.files[0]);
+  //Upload
+  function UploadObjectUsingPresignedURL() {
+    var user = "Laurens";
+    var api = "PXW64JdS4dP2HJNQFt9D";
+    var file = document.getElementById("customFile").files[0];
+    var filename = file.name;
+    var url =
+      "https://ohpj90916c.execute-api.us-east-1.amazonaws.com/getUploadURL?user=" +
+      user +
+      "&api=" +
+      api +
+      "&file=" +
+      filename;
+    var client = new HttpClient();
+    client.get(url, function (response) {
+      var body = JSON.parse(response);
+      var presignedURL = body.url;
+      var xhr = new XMLHttpRequest();
+      xhr.open("PUT", presignedURL, true);
+      xhr.onload = () => {
+        if (xhr.status === 200) {
+          console.log("Succesfully uploaded!");
+
+          setTimeout(function () {
+            window.location.reload();
+          }, 3500);
+        }
+      };
+      xhr.onerror = () => {
+        console.log("An error has occured!");
+      };
+      xhr.send(file);
+
+      axios
+        .get(
+          "https://ohpj90916c.execute-api.us-east-1.amazonaws.com/getFiles?user=Laurens&api=PXW64JdS4dP2HJNQFt9D"
+        )
+        .then((res) => {
+          setFiles([...res.data.Items]);
+        })
+        .catch((err) => console.log(err));
+    });
   }
+
+  var HttpClient = function () {
+    this.get = function (aUrl, aCallback) {
+      var anHttpRequest = new XMLHttpRequest();
+      anHttpRequest.onreadystatechange = function () {
+        if (anHttpRequest.readyState === 4 && anHttpRequest.status === 200)
+          aCallback(anHttpRequest.responseText);
+      };
+
+      anHttpRequest.open("GET", aUrl, true);
+      anHttpRequest.send(null);
+    };
+  };
 
   return (
     <div>
@@ -124,26 +174,25 @@ export default function Home() {
           <Card.Body>
             <Form>
               <Form.Group>
-                <Form.Label>Get upload URL</Form.Label>
-
-                <Form.Control
-                  style={{ marginTop: "2%", marginBottom: "2%" }}
-                  onChange={handleFileUpload}
+                <Form.Label>Get upload URL for file</Form.Label>
+                <br />
+                <input
                   type="file"
-                  name="file"
+                  id="customFile"
+                  aria-describedby="customFile"
+                  style={{ marginTop: "1%" }}
                 />
+                <br />
 
                 <Button
                   variant="primary"
-                  onClick={handleShow}
+                  onClick={UploadObjectUsingPresignedURL}
                   style={{ marginTop: "3%" }}
+                  type="button"
+                  id="customFile"
                 >
-                  Get upload URL
+                  Upload file
                 </Button>
-                <br />
-                <Form.Label style={{ fontWeight: "bold", marginTop: "5%" }}>
-                  Presigned upload URL:
-                </Form.Label>
               </Form.Group>
             </Form>
           </Card.Body>
@@ -163,34 +212,32 @@ export default function Home() {
                   />
                 </Form.Group>
                 <Button variant="primary" onClick={handleDownloadUrlCLick}>
-                  Get download URL
+                  Retrieve download
                 </Button>
                 <Form.Group
                   controleId="formChecksumDownload"
                   style={{ marginTop: "5%" }}
                 >
-                  <Form.Label style={{ fontWeight: "bold" }}>
-                    Presigned download URL:
-                  </Form.Label>
-
-                  <CopyToClipboard
-                    text={
-                      presignedDownloadUrl === null
-                        ? " "
+                  <a
+                    className="btn btn-primary"
+                    style={{
+                      visibility: `${hasGivenUuid ? "visible" : "hidden"}`,
+                    }}
+                    href={
+                      presignedDownloadUrl === undefined
+                        ? "/"
                         : presignedDownloadUrl.url
                     }
-                    onCopy={() => setCopied(true)}
+                    target="_blank"
                   >
-                    <Button
-                      variant="info"
-                      style={{
-                        visibility: `${hasGivenUuid ? "visible" : "hidden"}`,
-                        marginLeft: "20px",
-                      }}
-                    >
-                      Copy URL
-                    </Button>
-                  </CopyToClipboard>
+                    Download file
+                    <img
+                      alt="download icon"
+                      src={download}
+                      style={{}}
+                      width={24}
+                    />
+                  </a>
                   <img
                     alt="greenmarker"
                     src={correct}
@@ -221,7 +268,9 @@ export default function Home() {
                 <tr>
                   <th>Filename</th>
                   <th>UUID</th>
+                  <th>Copy UUID</th>
                   <th>Checksum</th>
+                  <th>Expiry date</th>
                 </tr>
               </thead>
               <tbody>
@@ -240,6 +289,7 @@ export default function Home() {
             <Table striped bordered hover responsive>
               <thead>
                 <tr>
+                  <th>User</th>
                   <th>Document ID</th>
                   <th>Log ID</th>
                   <th>Log time</th>
@@ -248,6 +298,7 @@ export default function Home() {
               <tbody>
                 {logs.map((item, i) => (
                   <tr key={i}>
+                    <td>{item.username}</td>
                     <td>{item.DocID}</td>
                     <td>{item.LogID}</td>
                     <td>{item.LogTime}</td>
