@@ -32,40 +32,51 @@ const UserRow = ({ item, onClick }) => (
 export default function Home() {
   const [files, setFiles] = useState([]);
   const [logs, setLogs] = useState([]);
+  const [uploadUrl, setUploadUrl] = useState({});
   const [downloadUrl, setDownloadUrl] = useState("");
   const [presignedDownloadUrl, setPresignedDownloadUrl] = useState({});
   const [selectedLog, setSelectedLog] = useState(
     "1def78ca-daa0-4eb3-8813-0329dedb5065"
   );
+  const [selectedFile, setSelectedFile] = useState("");
   const [hasGivenUuid, setHasGivenUuid] = useState(false);
   const [copied, setCopied] = useState(false);
   const [show, setShow] = useState(false);
   const [loading, setLoading] = useState(true);
+  const [uuid, setUuid] = useState("");
 
   useEffect(() => {
     async function fetchData() {
       var getFiles =
         "https://ohpj90916c.execute-api.us-east-1.amazonaws.com/getFiles?user=Laurens&api=PXW64JdS4dP2HJNQFt9D";
       var getLogs = `https://ohpj90916c.execute-api.us-east-1.amazonaws.com/getLogs?user=Laurens&api=PXW64JdS4dP2HJNQFt9D&id=${selectedLog}`;
-      var getDownloadUrl = `https://ohpj90916c.execute-api.us-east-1.amazonaws.com/getDownloadURL?user=Laurens&api=PXW64JdS4dP2HJNQFt9D&id=1def78ca-daa0-4eb3-8813-0329dedb5065`;
 
-      const requestOne = axios.get(getFiles);
-      const requestTwo = axios.get(getLogs);
-      const requestThree = hasGivenUuid
-        ? axios.get(
-            `https://ohpj90916c.execute-api.us-east-1.amazonaws.com/getDownloadURL?user=Laurens&api=PXW64JdS4dP2HJNQFt9D&id=${downloadUrl}`
-          )
-        : axios.get(getDownloadUrl);
+      const requestOne = axios.get(getFiles).catch((err) => console.log(err));
+      const requestTwo = axios.get(getLogs).catch((err) => console.log(err));
+      const requestThree = axios
+        .get(
+          `https://ohpj90916c.execute-api.us-east-1.amazonaws.com/getDownloadURL?user=Laurens&api=PXW64JdS4dP2HJNQFt9D&id=${downloadUrl}`
+        )
+        .catch((err) => console.log(err));
+      const requestFour = axios
+        .get(
+          `https://ohpj90916c.execute-api.us-east-1.amazonaws.com/getUploadURL?user=Laurens&api=PXW64JdS4dP2HJNQFt9D&file=${
+            selectedFile === null ? " " : selectedFile.name
+          }`
+        )
+        .catch((err) => console.log(err));
       axios
-        .all([requestOne, requestTwo, requestThree])
+        .all([requestOne, requestTwo, requestThree, requestFour])
         .then(
           axios.spread((...responses) => {
             const responseOne = responses[0];
             const responseTwo = responses[1];
             const responseThree = responses[2];
+            const responseFour = responses[3];
 
             setFiles(responseOne.data.Items);
             setLogs(responseTwo.data.Items);
+            setUploadUrl(responseFour.data);
             setPresignedDownloadUrl(responseThree.data);
             setLoading(false);
           })
@@ -73,18 +84,6 @@ export default function Home() {
         .catch((errors) => {
           console.error(errors);
         });
-
-      /*axios({
-        method: "post",
-        url:
-          "https://ohpj90916c.execute-api.us-east-1.amazonaws.com/getUploadURL",
-        headers: {},
-        data: {
-          user: "Laurens",
-          api: "PXW64JdS4dP2HJNQFt9D",
-          fileName: "testFile.jpg",
-        },
-      });*/
     }
     fetchData();
   }, [selectedLog, downloadUrl, hasGivenUuid]);
@@ -92,9 +91,10 @@ export default function Home() {
   const handleClose = () => setShow(false);
   const handleShow = () => setShow(true);
 
-  const onChangeHandler = (event) => {
-    setDownloadUrl(event.target.value);
+  const handleUuidChange = (event) => {
+    setUuid(event.target.value);
     setCopied(false);
+    setHasGivenUuid(false);
   };
 
   function handleUserClick(item) {
@@ -102,7 +102,13 @@ export default function Home() {
   }
 
   function handleDownloadUrlCLick() {
+    setDownloadUrl(uuid);
     setHasGivenUuid(true);
+  }
+
+  function handleFileUpload(event) {
+    setSelectedFile(event.target.files[0]);
+    console.log(event.target.files[0]);
   }
 
   return (
@@ -119,10 +125,14 @@ export default function Home() {
             <Form>
               <Form.Group>
                 <Form.Label>Get upload URL</Form.Label>
+
                 <Form.Control
-                  placeholder="Enter filename"
-                  onChange={onChangeHandler}
+                  style={{ marginTop: "2%", marginBottom: "2%" }}
+                  onChange={handleFileUpload}
+                  type="file"
+                  name="file"
                 />
+
                 <Button
                   variant="primary"
                   onClick={handleShow}
@@ -148,10 +158,10 @@ export default function Home() {
                 <Form.Group controlId="formUUIDDownload">
                   <Form.Control
                     placeholder="Enter UUID"
-                    onChange={onChangeHandler}
+                    onChange={handleUuidChange}
+                    value={uuid}
                   />
                 </Form.Group>
-
                 <Button variant="primary" onClick={handleDownloadUrlCLick}>
                   Get download URL
                 </Button>
@@ -165,8 +175,7 @@ export default function Home() {
 
                   <CopyToClipboard
                     text={
-                      presignedDownloadUrl.url === undefined &&
-                      presignedDownloadUrl.url === null
+                      presignedDownloadUrl === null
                         ? " "
                         : presignedDownloadUrl.url
                     }
