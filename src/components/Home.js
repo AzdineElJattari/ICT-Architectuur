@@ -50,6 +50,8 @@ export default function Home() {
   const [uuid, setUuid] = useState("");
   const [copied, setCopied] = useState(false);
   const [loading, setLoading] = useState(true);
+  const [fileUploadLoading, setFileUploadLoading] = useState(false);
+  const [fileUploadSucces, setFileUploadSucces] = useState(false);
 
   useEffect(() => {
     async function fetchData() {
@@ -100,8 +102,12 @@ export default function Home() {
   }
 
   function handleDownloadUrlCLick() {
-    setDownloadUrl(uuid);
-    setHasGivenUuid(true);
+    if (uuid.length === 0) {
+      alert("Please make sure the UUID field is filled in!");
+    } else {
+      setDownloadUrl(uuid);
+      setHasGivenUuid(true);
+    }
   }
 
   //Upload
@@ -109,43 +115,52 @@ export default function Home() {
     var user = "Laurens";
     var api = "PXW64JdS4dP2HJNQFt9D";
     var file = document.getElementById("customFile").files[0];
-    var filename = file.name;
-    var url =
-      "https://ohpj90916c.execute-api.us-east-1.amazonaws.com/getUploadURL?user=" +
-      user +
-      "&api=" +
-      api +
-      "&file=" +
-      filename;
-    var client = new HttpClient();
-    client.get(url, function (response) {
-      var body = JSON.parse(response);
-      var presignedURL = body.url;
-      var xhr = new XMLHttpRequest();
-      xhr.open("PUT", presignedURL, true);
-      xhr.onload = () => {
-        if (xhr.status === 200) {
-          console.log("Succesfully uploaded!");
+    if (file === undefined) {
+      alert("Please make sure to upload a file first");
+    } else {
+      var filename = file.name;
+      var url =
+        "https://ohpj90916c.execute-api.us-east-1.amazonaws.com/getUploadURL?user=" +
+        user +
+        "&api=" +
+        api +
+        "&file=" +
+        filename;
+      var client = new HttpClient();
+      client.get(url, function (response) {
+        var body = JSON.parse(response);
+        var presignedURL = body.url;
+        var xhr = new XMLHttpRequest();
+        xhr.open("PUT", presignedURL, true);
+        xhr.onload = () => {
+          if (xhr.status === 200) {
+            console.log("Succesfully uploaded!");
+            setFileUploadLoading(true);
+            setTimeout(function () {
+              setFileUploadLoading(false);
+              setFileUploadSucces(true);
+              setTimeout(function () {
+                setFileUploadSucces(false);
+                window.location.reload();
+              }, 1000);
+            }, 2000);
+          }
+        };
+        xhr.onerror = () => {
+          console.log("An error has occured!");
+        };
+        xhr.send(file);
 
-          setTimeout(function () {
-            window.location.reload();
-          }, 3500);
-        }
-      };
-      xhr.onerror = () => {
-        console.log("An error has occured!");
-      };
-      xhr.send(file);
-
-      axios
-        .get(
-          "https://ohpj90916c.execute-api.us-east-1.amazonaws.com/getFiles?user=Laurens&api=PXW64JdS4dP2HJNQFt9D"
-        )
-        .then((res) => {
-          setFiles([...res.data.Items]);
-        })
-        .catch((err) => console.log(err));
-    });
+        axios
+          .get(
+            "https://ohpj90916c.execute-api.us-east-1.amazonaws.com/getFiles?user=Laurens&api=PXW64JdS4dP2HJNQFt9D"
+          )
+          .then((res) => {
+            setFiles([...res.data.Items]);
+          })
+          .catch((err) => console.log(err));
+      });
+    }
   }
 
   var HttpClient = function () {
@@ -193,6 +208,28 @@ export default function Home() {
                 >
                   Upload file
                 </Button>
+                {fileUploadLoading ? (
+                  <Spinner
+                    animation="border"
+                    variant="primary"
+                    style={{
+                      marginLeft: "5%",
+                      marginTop: "3%",
+                      position: "absolute",
+                    }}
+                  />
+                ) : null}
+                {fileUploadSucces ? (
+                  <img
+                    src={correct}
+                    style={{
+                      width: "5%",
+                      marginLeft: "5%",
+                      marginTop: "3.5%",
+                      position: "absolute",
+                    }}
+                  />
+                ) : null}
               </Form.Group>
             </Form>
           </Card.Body>
